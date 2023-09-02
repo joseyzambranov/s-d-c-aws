@@ -1,0 +1,10 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "s-d-c-aws"
+resolve_s3 = true
+s3_prefix = "s-d-c-aws"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "ENV=\"DEV\" ASSETID=\"0001\" APID=\"SCSN\" SID=\"SND\" COID=\"SINC\" S3BucketName=\"sinc-0001-scsn-snd-s3-00\" NameBucket=\"sinc-0001-scsn-snd-s3-01\""
+image_repositories = []

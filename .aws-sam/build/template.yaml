@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: s-d-c-aws
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: App Profile
+      Parameters:
+      - ENV
+      - COID
+      - APID
+      - ASSETID
+      - SID
+    - Label:
+        default: Configuracion S3
+      Parameters:
+      - S3BucketName
+      - NameBucket
+Parameters:
+  ENV:
+    Description: Environment
+    Type: String
+    AllowedValues:
+    - PRD
+    - QAS
+    - DEV
+    - TST
+    Default: DEV
+  ASSETID:
+    Type: String
+    Description: "Identificador \xFAnico en la empresa por Proyecto o global (formado\
+      \ por cuatro d\xEDgitos)."
+    Default: '0001'
+  APID:
+    Type: String
+    Description: "C\xF3digo de empresa para representar el software, en este caso\
+      \ es un software para \"Sistema de Notificaciones\", por lo que se seleccion\xF3\
+      \ SCSN (Sinapsis Corp Sistema de Notificaciones)"
+    Default: SCSN
+  SID:
+    Type: String
+    Description: "Tres letras que representan el entorno, una de estas letras debe\
+      \ representar (Q=QAS, D=DEV, P=PRD etc.), otras dos letras representan la aplicaci\xF3\
+      n"
+    Default: SND
+  COID:
+    Type: String
+    Description: "C\xF3digo de la empresa (cuatro letras representativas) en este\
+      \ caso se consider\xF3 SINC"
+    Default: SINC
+  S3BucketName:
+    Description: Bucket para alojar las bases
+    Type: String
+    Default: sinc-0001-scsn-snd-s3-00
+  NameBucket:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Bucket name can include numbers, lowercase letters, uppercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Type: String
+    Description: Ingrese el nombre del bucket para el front
+    Default: sinc-0001-scsn-snd-s3-01
+Resources:
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name:
+        Fn::Sub: ${COID}-${ASSETID}-${APID}-${SID}-AG-01
+      FailOnWarnings: true
+  LambdaFunction1:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${COID}-${ASSETID}-${APID}-${SID}-LA-00-REGISTRA-DETALLE-BASE
+      Runtime: nodejs14.x
+      Handler: index.handler
+      Timeout: 900
+      MemorySize: 1024
+      Code:
+        ZipFile: "exports.handler = async (event) => {\n  // Aqu\xED puedes agregar\
+          \ la l\xF3gica de tu funci\xF3n Lambda para procesar el evento\n  console.log('Evento\
+          \ recibido:', event);\n}\n"
+      Role:
+        Fn::GetAtt:
+        - MyLambdaFunctionRole
+        - Arn
+      Environment:
+        Variables:
+          TZ: America/Lima
+  MyLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: ${COID}-${ASSETID}-${APID}-${SID}-LA-00_Role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName:
+          Fn::Sub: ${COID}-${ASSETID}-${APID}-${SID}-LA-00_Policy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:DeleteObject*
+            - s3:GetObject*
+            - s3:PutObject*
+            - lambda:*
+            - cloudwatch:*
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - dynamodb:GetRecords
+            - dynamodb:GetShardIterator
+            - dynamodb:DescribeStream
+            - dynamodb:ListStreams
+            - dynamodb:UpdateItem
+            - sqs:*
+            Resource: '*'
+Outputs:
+  RootUrl:
+    Description: Url principal del servicio
+    Value:
+      Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/sinapsis/
